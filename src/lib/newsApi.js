@@ -1,11 +1,15 @@
-// Client-side RSS fetching via rss2json (free, no key required for moderate use).
-// Falls back to allorigins.win + DOMParser if rss2json fails.
+// Client-side RSS fetching via rss2json (free, no key required).
+// IMPORTANT: the free tier does NOT support the `&count=` parameter —
+// including it silently returns {status:'error'}. Always omit it.
 
 const RSS2JSON = (feedUrl) =>
-  `https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(feedUrl)}&count=12`
+  `https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(feedUrl)}`
 
 const ALLORIGINS = (feedUrl) =>
-  `https://api.allorigins.win/get?url=${encodeURIComponent(feedUrl)}`
+  `https://api.allorigins.win/raw?url=${encodeURIComponent(feedUrl)}`
+
+const CORSPROXY = (feedUrl) =>
+  `https://corsproxy.io/?url=${encodeURIComponent(feedUrl)}`
 
 const CACHE_MS = 15 * 60 * 1000 // 15 min
 const cacheKey = (url) => `rss_${url}`
@@ -30,10 +34,10 @@ function stripHtml(html) {
 }
 
 async function fetchViaRss2Json(feedUrl) {
-  const res = await fetch(RSS2JSON(feedUrl), { signal: AbortSignal.timeout(8000) })
+  const res = await fetch(RSS2JSON(feedUrl), { signal: AbortSignal.timeout(10000) })
   if (!res.ok) throw new Error(`rss2json ${res.status}`)
   const json = await res.json()
-  if (json.status !== 'ok') throw new Error(`rss2json status=${json.status}`)
+  if (json.status !== 'ok') throw new Error(`rss2json ${json.status}: ${json.message || ''}`)
   return (json.items || []).map(it => ({
     title: it.title,
     link: it.link,
@@ -44,40 +48,57 @@ async function fetchViaRss2Json(feedUrl) {
   }))
 }
 
-async function fetchViaAllOrigins(feedUrl) {
-  const res = await fetch(ALLORIGINS(feedUrl), { signal: AbortSignal.timeout(8000) })
-  if (!res.ok) throw new Error(`allorigins ${res.status}`)
-  const json = await res.json()
-  const xml = new DOMParser().parseFromString(json.contents, 'text/xml')
-  const channelTitle = xml.querySelector('channel > title, feed > title')?.textContent || ''
-  const items = Array.from(xml.querySelectorAll('item, entry')).slice(0, 12)
-  return items.map(item => ({
-    title: item.querySelector('title')?.textContent?.trim(),
-    link: item.querySelector('link')?.getAttribute('href') || item.querySelector('link')?.textContent?.trim(),
-    pubDate: item.querySelector('pubDate, published, updated')?.textContent?.trim(),
-    description: stripHtml(item.querySelector('description, summary, content')?.textContent || ''),
-    author: item.querySelector('author, dc\\:creator')?.textContent?.trim() || channelTitle,
-    sourceName: channelTitle,
-  }))
+async function fetchXmlAndParse(fetchUrl) {
+  const res = await fetch(fetchUrl, { signal: AbortSignal.timeout(10000) })
+  if (!res.ok) throw new Error(`proxy ${res.status}`)
+  const text = await res.text()
+  if (text.trim().startsWith('{') && text.includes('error')) throw new Error('proxy returned JSON error')
+  const xml = new DOMParser().parseFromString(text, 'text/xml')
+  const parseError = xml.querySelector('parsererror')
+  if (parseError) throw new Error('invalid XML')
+  const channelTitle = xml.querySelector('channel > title, feed > title')?.textContent?.trim() || ''
+  const items = Array.from(xml.querySelectorAll('item, entry'))
+  if (items.length === 0) throw new Error('no items in feed')
+  return items.map(item => {
+    const linkEl = item.querySelector('link')
+    const link = linkEl?.getAttribute('href') || linkEl?.textContent?.trim()
+    return {
+      title: item.querySelector('title')?.textContent?.trim(),
+      link,
+      pubDate: item.querySelector('pubDate, published, updated')?.textContent?.trim(),
+      description: stripHtml(
+        item.querySelector('description')?.textContent ||
+        item.querySelector('summary')?.textContent ||
+        item.querySelector('content')?.textContent || ''
+      ),
+      author: item.querySelector('author, creator')?.textContent?.trim() || channelTitle,
+      sourceName: channelTitle,
+    }
+  })
 }
 
 export async function fetchFeed(feedUrl) {
   const cached = getCached(feedUrl)
   if (cached) return cached
-  try {
-    const items = await fetchViaRss2Json(feedUrl)
-    setCached(feedUrl, items)
-    return items
-  } catch {
+  // Try methods in order
+  const methods = [
+    () => fetchViaRss2Json(feedUrl),
+    () => fetchXmlAndParse(CORSPROXY(feedUrl)),
+    () => fetchXmlAndParse(ALLORIGINS(feedUrl)),
+  ]
+  for (const method of methods) {
     try {
-      const items = await fetchViaAllOrigins(feedUrl)
-      setCached(feedUrl, items)
-      return items
+      const items = await method()
+      if (items && items.length > 0) {
+        setCached(feedUrl, items)
+        return items
+      }
     } catch (e) {
-      console.warn(`[newsApi] all methods failed for`, feedUrl, e)
-      return []
+      // continue to next method
     }
   }
+  console.warn(`[newsApi] all methods failed for`, feedUrl)
+  return []
 }
 
 // Fetch multiple feeds, merge, dedupe by link, sort by date desc
@@ -96,44 +117,42 @@ export async function fetchSection(feeds, limit = 20) {
   return deduped.slice(0, limit)
 }
 
-// ============ Feed definitions ============
+// ============ Feed definitions (verified working on rss2json) ============
 
 export const FEEDS = {
   geopolitical: [
-    { name: 'Foreign Affairs',   url: 'https://www.foreignaffairs.com/rss.xml' },
-    { name: 'Reuters World',     url: 'https://feeds.reuters.com/Reuters/worldNews' },
-    { name: 'The Economist',     url: 'https://www.economist.com/international/rss.xml' },
-    { name: 'War on the Rocks',  url: 'https://warontherocks.com/feed/' },
-    { name: 'CFR',               url: 'https://www.cfr.org/rss-feeds' },
-    { name: 'FT World',          url: 'https://www.ft.com/world?format=rss' },
+    { name: 'Foreign Affairs',  url: 'https://www.foreignaffairs.com/rss.xml' },
+    { name: 'FT World',         url: 'https://www.ft.com/world?format=rss' },
+    { name: 'Reuters World',    url: 'https://feeds.feedburner.com/reuters/worldNews' },
+    { name: 'Economist Intl',   url: 'https://www.economist.com/international/rss.xml' },
+    { name: 'War on the Rocks', url: 'https://warontherocks.com/feed/' },
   ],
   macro: [
     { name: 'Apollo (Slok)',     url: 'https://www.apolloacademy.com/feed/' },
     { name: 'FT Markets',        url: 'https://www.ft.com/markets?format=rss' },
-    { name: 'Reuters Business',  url: 'https://feeds.reuters.com/reuters/businessNews' },
-    { name: 'The Economist Finance', url: 'https://www.economist.com/finance-and-economics/rss.xml' },
+    { name: 'Economist Finance', url: 'https://www.economist.com/finance-and-economics/rss.xml' },
     { name: 'Calculated Risk',   url: 'https://www.calculatedriskblog.com/feeds/posts/default' },
-    { name: 'Noahpinion',        url: 'https://www.noahpinion.blog/feed' },
+    { name: 'Noahpinion',        url: 'https://noahpinion.substack.com/feed' },
   ],
   techAi: [
-    { name: 'TechCrunch AI',     url: 'https://techcrunch.com/category/artificial-intelligence/feed/' },
-    { name: 'The Verge AI',      url: 'https://www.theverge.com/rss/ai-artificial-intelligence/index.xml' },
-    { name: 'VentureBeat AI',    url: 'https://venturebeat.com/category/ai/feed/' },
-    { name: 'Simon Willison',    url: 'https://simonwillison.net/atom/everything/' },
-    { name: 'Import AI',         url: 'https://jack-clark.net/feed/' },
-    { name: 'The Neuron',        url: 'https://www.theneurondaily.com/feed' },
-    { name: 'TechCrunch Startups', url: 'https://techcrunch.com/category/startups/feed/' },
+    { name: 'TechCrunch AI',   url: 'https://techcrunch.com/category/artificial-intelligence/feed/' },
+    { name: 'The Verge AI',    url: 'https://www.theverge.com/rss/ai-artificial-intelligence/index.xml' },
+    { name: 'VentureBeat AI',  url: 'https://venturebeat.com/category/ai/feed/' },
+    { name: 'Simon Willison',  url: 'https://simonwillison.net/atom/everything/' },
+    { name: 'Import AI',       url: 'https://importai.substack.com/feed' },
+    { name: 'Latent Space',    url: 'https://www.latent.space/feed' },
   ],
   longform: [
     { name: 'Stratechery',                url: 'https://stratechery.com/feed/' },
     { name: 'One Useful Thing (Mollick)', url: 'https://www.oneusefulthing.org/feed' },
     { name: 'Astral Codex Ten',           url: 'https://www.astralcodexten.com/feed' },
     { name: 'Marginal Revolution',        url: 'https://marginalrevolution.com/feed' },
-    { name: 'Noahpinion',                 url: 'https://www.noahpinion.blog/feed' },
-    { name: 'Ribbonfarm',                 url: 'https://www.ribbonfarm.com/feed/' },
-    { name: 'Gwern',                      url: 'https://gwern.net/doc/index.rss' },
-    { name: 'Not Boring (Packy)',         url: 'https://www.notboring.co/feed' },
-    { name: 'Ezra Klein Show',            url: 'https://feeds.simplecast.com/82FI35Px' },
-    { name: 'The Dispatch',               url: 'https://thedispatch.com/feed/' },
+    { name: 'Noahpinion',                 url: 'https://noahpinion.substack.com/feed' },
+    // AI × society / philosophy / growing up in AI — these may or may not work
+    // depending on proxy/rate-limit; fallback to the above five works reliably.
+    { name: 'The Convivial Society',      url: 'https://theconvivialsociety.substack.com/feed' },
+    { name: 'After Babel (Haidt)',        url: 'https://www.afterbabel.com/feed' },
+    { name: 'Gary Marcus',                url: 'https://garymarcus.substack.com/feed' },
+    { name: 'Zvi Mowshowitz',             url: 'https://thezvi.substack.com/feed' },
   ],
 }
