@@ -1,32 +1,31 @@
 // Stock tickers to track
 export const INDICES = [
-  { symbol: "^GSPC", name: "S&P 500", shortName: "S&P 500" },
-  { symbol: "^IXIC", name: "NASDAQ Composite", shortName: "NASDAQ" },
-  { symbol: "^DJI", name: "Dow Jones", shortName: "DOW" },
-  { symbol: "^RUT", name: "Russell 2000", shortName: "Russell 2000" },
-  { symbol: "^VIX", name: "CBOE Volatility", shortName: "VIX" },
+  { symbol: "^GSPC", name: "S&P 500", shortName: "S&P 500", yearStart: 5881.63 },
+  { symbol: "^IXIC", name: "NASDAQ Composite", shortName: "NASDAQ", yearStart: 19310.79 },
+  { symbol: "^DJI", name: "Dow Jones", shortName: "DOW", yearStart: 42544.22 },
+  { symbol: "^RUT", name: "Russell 2000", shortName: "Russell 2000", yearStart: 2230.16 },
+  { symbol: "^VIX", name: "CBOE Volatility", shortName: "VIX", yearStart: 17.35 },
 ];
 
 export const WATCHLIST = [
-  { symbol: "NVDA", name: "NVIDIA", sector: "Semiconductors" },
-  { symbol: "GOOGL", name: "Alphabet (Google)", sector: "Tech / AI" },
-  { symbol: "NOW", name: "ServiceNow", sector: "Enterprise Software" },
-  { symbol: "CRM", name: "Salesforce", sector: "Enterprise Software" },
-  { symbol: "MSFT", name: "Microsoft", sector: "Tech / AI" },
-  { symbol: "AAPL", name: "Apple", sector: "Tech / Consumer" },
-  { symbol: "AMZN", name: "Amazon", sector: "Tech / Cloud" },
-  { symbol: "META", name: "Meta Platforms", sector: "Tech / AI" },
-  { symbol: "SNOW", name: "Snowflake", sector: "Data Infrastructure" },
-  { symbol: "PLTR", name: "Palantir", sector: "AI / Data Analytics" },
-  { symbol: "MDB", name: "MongoDB", sector: "Data Infrastructure" },
-  { symbol: "DDOG", name: "Datadog", sector: "Observability" },
-  { symbol: "CRWD", name: "CrowdStrike", sector: "Cybersecurity" },
-  { symbol: "AI", name: "C3.ai", sector: "Enterprise AI" },
-  { symbol: "PATH", name: "UiPath", sector: "AI / Automation" },
+  { symbol: "NVDA",  name: "NVIDIA",         sector: "Semiconductors",      yearStart: 134.29 },
+  { symbol: "GOOGL", name: "Alphabet (Google)", sector: "Tech / AI",        yearStart: 189.30 },
+  { symbol: "NOW",   name: "ServiceNow",     sector: "Enterprise Software", yearStart: 1059.39 },
+  { symbol: "CRM",   name: "Salesforce",     sector: "Enterprise Software", yearStart: 334.30 },
+  { symbol: "MSFT",  name: "Microsoft",      sector: "Tech / AI",           yearStart: 421.50 },
+  { symbol: "AAPL",  name: "Apple",          sector: "Tech / Consumer",     yearStart: 250.42 },
+  { symbol: "AMZN",  name: "Amazon",         sector: "Tech / Cloud",        yearStart: 219.39 },
+  { symbol: "META",  name: "Meta Platforms", sector: "Tech / AI",           yearStart: 585.25 },
+  { symbol: "SNOW",  name: "Snowflake",      sector: "Data Infrastructure", yearStart: 154.76 },
+  { symbol: "PLTR",  name: "Palantir",       sector: "AI / Data Analytics", yearStart: 75.63 },
+  { symbol: "MDB",   name: "MongoDB",        sector: "Data Infrastructure", yearStart: 232.57 },
+  { symbol: "DDOG",  name: "Datadog",        sector: "Observability",       yearStart: 143.29 },
+  { symbol: "CRWD",  name: "CrowdStrike",    sector: "Cybersecurity",       yearStart: 342.44 },
+  { symbol: "AI",    name: "C3.ai",          sector: "Enterprise AI",       yearStart: 31.02 },
+  { symbol: "PATH",  name: "UiPath",         sector: "AI / Automation",     yearStart: 12.45 },
 ];
 
-// Generate realistic mock data for demo purposes
-// In production, these would come from Yahoo Finance, Alpha Vantage, or similar APIs
+// Generate realistic mock data
 function generateSparkline(base, volatility, points = 20, trend = 0) {
   const data = [];
   let current = base;
@@ -41,62 +40,65 @@ function randomChange(min, max) {
   return (Math.random() * (max - min) + min);
 }
 
+// Current prices (April 2026) — representative values
 export function getMockIndexData() {
-  const indexData = {
-    "^GSPC": { price: 5282.70, change: randomChange(-30, 60), sparkline: generateSparkline(5200, 30, 20, 0.5) },
-    "^IXIC": { price: 16384.47, change: randomChange(-100, 200), sparkline: generateSparkline(16100, 100, 20, 0.6) },
-    "^DJI": { price: 39872.99, change: randomChange(-100, 200), sparkline: generateSparkline(39500, 150, 20, 0.3) },
-    "^RUT": { price: 2003.17, change: randomChange(-15, 30), sparkline: generateSparkline(1970, 15, 20, 0.4) },
-    "^VIX": { price: 18.42, change: randomChange(-3, 3), sparkline: generateSparkline(19, 1.5, 20, -0.2) },
+  return {
+    "^GSPC": { price: 5520.40 + randomChange(-20, 20), change: randomChange(-30, 60), sparkline: generateSparkline(5450, 30, 20, 0.5) },
+    "^IXIC": { price: 18120.87 + randomChange(-80, 80), change: randomChange(-100, 200), sparkline: generateSparkline(17900, 100, 20, 0.6) },
+    "^DJI":  { price: 41022.50 + randomChange(-100, 100), change: randomChange(-100, 200), sparkline: generateSparkline(40700, 150, 20, 0.3) },
+    "^RUT":  { price: 2088.45 + randomChange(-12, 12), change: randomChange(-15, 30), sparkline: generateSparkline(2060, 15, 20, 0.4) },
+    "^VIX":  { price: 16.92 + randomChange(-1, 1), change: randomChange(-3, 3), sparkline: generateSparkline(17, 1.5, 20, -0.2) },
   };
-  return indexData;
 }
 
 export function getMockStockData() {
-  const stockData = {
-    NVDA: { price: 877.35, change: randomChange(-15, 25), marketCap: "2.16T", pe: 64.2, volume: "42.1M" },
-    GOOGL: { price: 163.48, change: randomChange(-5, 8), marketCap: "2.01T", pe: 25.8, volume: "28.3M" },
-    NOW: { price: 892.15, change: randomChange(-10, 15), marketCap: "184.2B", pe: 58.3, volume: "1.8M" },
-    CRM: { price: 272.90, change: randomChange(-5, 8), marketCap: "263.1B", pe: 45.7, volume: "6.2M" },
-    MSFT: { price: 425.22, change: randomChange(-5, 10), marketCap: "3.16T", pe: 35.1, volume: "22.7M" },
-    AAPL: { price: 198.11, change: randomChange(-3, 5), marketCap: "3.04T", pe: 30.4, volume: "55.3M" },
-    AMZN: { price: 186.49, change: randomChange(-4, 7), marketCap: "1.94T", pe: 42.6, volume: "38.9M" },
-    META: { price: 502.30, change: randomChange(-8, 12), marketCap: "1.27T", pe: 28.9, volume: "18.4M" },
-    SNOW: { price: 162.78, change: randomChange(-5, 8), marketCap: "52.8B", pe: null, volume: "4.2M" },
-    PLTR: { price: 24.56, change: randomChange(-1, 2), marketCap: "54.1B", pe: 215.0, volume: "45.6M" },
-    MDB: { price: 268.43, change: randomChange(-8, 12), marketCap: "19.2B", pe: null, volume: "2.1M" },
-    DDOG: { price: 122.67, change: randomChange(-4, 6), marketCap: "39.8B", pe: 285.0, volume: "5.3M" },
-    CRWD: { price: 312.45, change: randomChange(-6, 10), marketCap: "74.9B", pe: 92.1, volume: "3.8M" },
-    AI: { price: 28.34, change: randomChange(-2, 3), marketCap: "3.6B", pe: null, volume: "8.9M" },
-    PATH: { price: 14.22, change: randomChange(-1, 1.5), marketCap: "8.1B", pe: null, volume: "7.2M" },
+  const base = {
+    NVDA:  { price: 1122.35, change: randomChange(-15, 25), marketCap: "2.76T", pe: 72.1, volume: "46.3M" },
+    GOOGL: { price: 212.48,  change: randomChange(-5, 8),   marketCap: "2.60T", pe: 26.9, volume: "31.2M" },
+    NOW:   { price: 985.17,  change: randomChange(-10, 15), marketCap: "203.5B", pe: 62.8, volume: "1.9M"  },
+    CRM:   { price: 298.82,  change: randomChange(-5, 8),   marketCap: "288.4B", pe: 47.3, volume: "5.9M"  },
+    MSFT:  { price: 472.55,  change: randomChange(-5, 10),  marketCap: "3.51T", pe: 37.8, volume: "24.3M" },
+    AAPL:  { price: 226.40,  change: randomChange(-3, 5),   marketCap: "3.44T", pe: 32.2, volume: "52.1M" },
+    AMZN:  { price: 243.96,  change: randomChange(-4, 7),   marketCap: "2.56T", pe: 44.1, volume: "36.8M" },
+    META:  { price: 672.15,  change: randomChange(-8, 12),  marketCap: "1.69T", pe: 31.2, volume: "17.2M" },
+    SNOW:  { price: 185.24,  change: randomChange(-5, 8),   marketCap: "62.1B",  pe: null, volume: "4.6M"  },
+    PLTR:  { price: 92.17,   change: randomChange(-1.5, 3), marketCap: "210.4B", pe: 268.0, volume: "52.1M" },
+    MDB:   { price: 302.44,  change: randomChange(-8, 12),  marketCap: "22.8B",  pe: null, volume: "2.3M"  },
+    DDOG:  { price: 148.88,  change: randomChange(-4, 6),   marketCap: "50.2B",  pe: 298.0, volume: "5.7M"  },
+    CRWD:  { price: 389.72,  change: randomChange(-6, 10),  marketCap: "95.1B",  pe: 104.3, volume: "3.6M"  },
+    AI:    { price: 33.84,   change: randomChange(-2, 3),   marketCap: "4.3B",   pe: null, volume: "8.5M"  },
+    PATH:  { price: 14.85,   change: randomChange(-1, 1.5), marketCap: "8.4B",   pe: null, volume: "7.0M"  },
   };
 
-  // Add sparklines
-  Object.keys(stockData).forEach(symbol => {
-    const base = stockData[symbol].price * 0.95;
-    const volatility = stockData[symbol].price * 0.02;
-    stockData[symbol].sparkline = generateSparkline(base, volatility, 20, stockData[symbol].change > 0 ? 0.3 : -0.3);
+  Object.keys(base).forEach(symbol => {
+    const b = base[symbol].price * 0.95;
+    const vol = base[symbol].price * 0.02;
+    base[symbol].sparkline = generateSparkline(b, vol, 20, base[symbol].change > 0 ? 0.3 : -0.3);
   });
 
-  return stockData;
+  return base;
 }
 
-// S&P 500 sector performance (mock)
+// Compute YTD %
+export function ytdChange(current, yearStart) {
+  return ((current - yearStart) / yearStart) * 100;
+}
+
+// S&P 500 sector performance (today's %)
 export const sectorPerformance = [
-  { name: "Technology", change: 2.4, weight: 31.2 },
-  { name: "Healthcare", change: 0.8, weight: 12.1 },
-  { name: "Financials", change: 1.1, weight: 13.4 },
-  { name: "Consumer Disc.", change: -0.3, weight: 10.8 },
-  { name: "Communication", change: 1.9, weight: 9.2 },
-  { name: "Industrials", change: 0.5, weight: 8.7 },
-  { name: "Consumer Staples", change: -0.1, weight: 5.9 },
-  { name: "Energy", change: -1.2, weight: 3.8 },
-  { name: "Utilities", change: 0.3, weight: 2.5 },
-  { name: "Real Estate", change: -0.4, weight: 2.3 },
-  { name: "Materials", change: 0.2, weight: 2.1 },
+  { name: "Technology",       change: 2.4,  weight: 31.2, ytd: 9.8  },
+  { name: "Communication",    change: 1.9,  weight: 9.2,  ytd: 12.3 },
+  { name: "Financials",       change: 1.1,  weight: 13.4, ytd: 5.1  },
+  { name: "Healthcare",       change: 0.8,  weight: 12.1, ytd: 3.4  },
+  { name: "Industrials",      change: 0.5,  weight: 8.7,  ytd: 4.2  },
+  { name: "Utilities",        change: 0.3,  weight: 2.5,  ytd: 6.5  },
+  { name: "Materials",        change: 0.2,  weight: 2.1,  ytd: 1.8  },
+  { name: "Consumer Staples", change: -0.1, weight: 5.9,  ytd: 2.0  },
+  { name: "Consumer Disc.",   change: -0.3, weight: 10.8, ytd: -1.2 },
+  { name: "Real Estate",      change: -0.4, weight: 2.3,  ytd: -2.3 },
+  { name: "Energy",           change: -1.2, weight: 3.8,  ytd: -4.8 },
 ];
 
-// Market breadth data
 export const marketBreadth = {
   advancers: 312,
   decliners: 189,
